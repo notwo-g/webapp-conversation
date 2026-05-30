@@ -130,23 +130,25 @@ const Main: FC<IMainProps> = () => {
         const { data } = res
         const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
 
-        data.forEach((item: any) => {
-          newChatList.push({
-            id: `question-${item.id}`,
-            content: item.query,
-            isAnswer: false,
-            message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
+        if (Array.isArray(data)) {
+          data.forEach((item: any) => {
+            newChatList.push({
+              id: `question-${item.id}`,
+              content: item.query,
+              isAnswer: false,
+              message_files: item.message_files?.filter((file: any) => file.belongs_to === 'user') || [],
 
+            })
+            newChatList.push({
+              id: item.id,
+              content: item.answer,
+              agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
+              feedback: item.feedback,
+              isAnswer: true,
+              message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
+            })
           })
-          newChatList.push({
-            id: item.id,
-            content: item.answer,
-            agent_thoughts: addFileInfos(item.agent_thoughts ? sortAgentSorts(item.agent_thoughts) : item.agent_thoughts, item.message_files),
-            feedback: item.feedback,
-            isAnswer: true,
-            message_files: item.message_files?.filter((file: any) => file.belongs_to === 'assistant') || [],
-          })
-        })
+        }
         setChatList(newChatList)
       })
     }
@@ -307,7 +309,7 @@ const Main: FC<IMainProps> = () => {
     let emptyRequiredInput = false
     promptConfig.prompt_variables.forEach((item) => {
       if (item.required && !currInputs[item.key])
-        emptyRequiredInput = true
+      { emptyRequiredInput = true }
     })
 
     if (emptyRequiredInput) {
@@ -459,22 +461,37 @@ const Main: FC<IMainProps> = () => {
         })
       },
       async onCompleted(hasError?: boolean) {
-        if (hasError) { return }
+        try {
+          if (hasError) { return }
 
-        if (getConversationIdChangeBecauseOfNew()) {
-          const { data: allConversations }: any = await fetchConversations()
-          const newItem: any = await generationConversationName(allConversations[0].id)
-
-          const newAllConversations = produce(allConversations, (draft: any) => {
-            draft[0].name = newItem.name
-          })
-          setConversationList(newAllConversations as any)
+          if (getConversationIdChangeBecauseOfNew()) {
+            const { data: allConversations }: any = await fetchConversations()
+            if (allConversations && allConversations.length > 0) {
+              const newItem: any = await generationConversationName(allConversations[0].id)
+              const newAllConversations = produce(allConversations, (draft: any) => {
+                draft[0].name = newItem.name
+              })
+              setConversationList(newAllConversations as any)
+            }
+            setConversationIdChangeBecauseOfNew(false)
+            resetNewConversationInputs()
+            setChatNotStarted()
+            // Only update conversation ID for NEW conversations
+            if (tempNewConversationId) {
+              setCurrConversationId(tempNewConversationId, APP_ID, true)
+            }
+          }
+          else {
+            setConversationIdChangeBecauseOfNew(false)
+            setChatNotStarted()
+          }
         }
-        setConversationIdChangeBecauseOfNew(false)
-        resetNewConversationInputs()
-        setChatNotStarted()
-        setCurrConversationId(tempNewConversationId, APP_ID, true)
-        setRespondingFalse()
+        catch (e: any) {
+          console.error('onCompleted error:', e)
+        }
+        finally {
+          setRespondingFalse()
+        }
       },
       onFile(file) {
         const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]

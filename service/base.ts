@@ -312,7 +312,9 @@ const baseFetch = (url: string, fetchOptions: any, { needAllResponseContent }: I
           }
 
           // return data
-          const data = options.headers.get('Content-type') === ContentType.download ? res.blob() : res.json()
+          const data = options.headers.get('Content-type') === ContentType.download
+            ? res.blob()
+            : res.json().catch(() => ({}))
 
           resolve(needAllResponseContent ? resClone : data)
         })
