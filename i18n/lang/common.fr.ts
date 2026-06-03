@@ -14,6 +14,7 @@ const translation = {
     search: 'Rechercher',
     send: 'Envoyer',
     lineBreak: 'Saut de ligne',
+    delete: 'Supprimer',
     like: 'like',
     dislike: 'dislike',
     ok: 'D\'accord',

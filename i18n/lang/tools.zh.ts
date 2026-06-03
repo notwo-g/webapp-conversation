@@ -62,6 +62,8 @@ const translation = {
     privacyPolicyPlaceholder: '请输入隐私协议',
   },
   thought: {
+    thinking: '正在思考',
+    thoughtProcess: '思考过程',
     using: '正在使用',
     used: '已使用',
     requestTitle: '请求来自',

@@ -14,6 +14,7 @@ const translation = {
     search: 'Tìm kiếm',
     send: 'Gửi',
     lineBreak: 'Xuống dòng',
+    delete: 'Xóa',
     like: 'thích',
     dislike: 'không thích',
     ok: 'OK',

@@ -16,6 +16,7 @@ const translation = {
     configDisabled:
       'Les paramètres de la session précédente ont été utilisés pour cette session.',
     startChat: 'Démarrer la conversation',
+    deleteConversationConfirm: 'Supprimer cette conversation ? Cette action est irreversible.',
     privacyPolicyLeft:
       'Veuillez lire la ',
     privacyPolicyMiddle:

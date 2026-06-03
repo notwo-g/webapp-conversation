@@ -13,9 +13,15 @@ import Button from '@/app/components/base/button'
 export const AppInfoComp: FC<{ siteInfo: AppInfo }> = ({ siteInfo }) => {
   const { t } = useTranslation()
   return (
-    <div>
-      <div className='flex items-center py-2 text-xl font-medium text-gray-700 rounded-md'>👏 {t('app.common.welcome')} {siteInfo.title}</div>
-      <p className='text-sm text-gray-500'>{siteInfo.description}</p>
+    <div className='flex items-start gap-3 tablet:gap-4'>
+      <div className='flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gray-900 text-base font-semibold text-white shadow-sm tablet:h-12 tablet:w-12 tablet:text-lg'>
+        {siteInfo.title?.slice(0, 1)?.toUpperCase()}
+      </div>
+      <div className='min-w-0'>
+        <div className='text-xs font-medium uppercase text-primary-600'>{t('app.common.welcome')}</div>
+        <div className='mt-1 truncate text-xl font-semibold leading-7 text-gray-900 tablet:text-2xl tablet:leading-8'>{siteInfo.title}</div>
+        <p className='mt-1.5 text-sm leading-6 text-gray-500 tablet:mt-2'>{siteInfo.description}</p>
+      </div>
     </div>
   )
 }
@@ -45,7 +51,7 @@ export const ChatBtn: FC<{ onClick: () => void, className?: string }> = ({
   return (
     <Button
       type='primary'
-      className={cn(className, `space-x-2 flex items-center ${s.customBtn}`)}
+      className={cn(className, `space-x-2 flex items-center !h-11 mobile:w-full tablet:!h-10 ${s.customBtn}`)}
       onClick={onClick}
     >
       <svg width="20" height="21" viewBox="0 0 20 21" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -70,6 +70,8 @@ const translation = {
     testResultPlaceholder: 'Kết quả kiểm tra sẽ hiển thị ở đây',
   },
   thought: {
+    thinking: 'Dang suy nghi',
+    thoughtProcess: 'Qua trinh suy nghi',
     using: 'Đang sử dụng',
     used: 'Đã sử dụng',
     requestTitle: 'Yêu cầu đến',

@@ -9,7 +9,7 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
-import { fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { deleteConversation, fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -84,6 +84,7 @@ const Main: FC<IMainProps> = () => {
 
   const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew, getConversationIdChangeBecauseOfNew] = useGetState(false)
   const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(false)
+  const [deleteConversationId, setDeleteConversationId] = useState<string | null>(null)
   const handleStartChat = (inputs: Record<string, any>) => {
     createNewChat()
     setConversationIdChangeBecauseOfNew(true)
@@ -168,6 +169,43 @@ const Main: FC<IMainProps> = () => {
     // trigger handleConversationSwitch
     setCurrConversationId(id, APP_ID)
     hideSidebar()
+  }
+
+  const requestDeleteConversation = (id: string) => {
+    if (id === '-1') { return }
+    setDeleteConversationId(id)
+  }
+
+  const handleDeleteConversation = async () => {
+    if (!deleteConversationId) { return }
+
+    try {
+      await deleteConversation(deleteConversationId)
+      const restConversations = conversationList.filter(item => item.id !== deleteConversationId)
+      setConversationList(restConversations)
+
+      if (deleteConversationId === currConversationId) {
+        const nextConversation = restConversations[0]
+        if (nextConversation) {
+          setConversationIdChangeBecauseOfNew(false)
+          setCurrConversationId(nextConversation.id, APP_ID)
+        }
+        else {
+          setConversationIdChangeBecauseOfNew(true)
+          setCurrConversationId('-1', APP_ID)
+          setChatNotStarted()
+          setChatList([])
+        }
+      }
+
+      notify({ type: 'success', message: t('common.api.success') })
+    }
+    catch (e: any) {
+      notify({ type: 'error', message: e?.message || String(e) })
+    }
+    finally {
+      setDeleteConversationId(null)
+    }
   }
 
   /*
@@ -659,6 +697,7 @@ const Main: FC<IMainProps> = () => {
       <Sidebar
         list={conversationList}
         onCurrentIdChange={handleConversationIdChange}
+        onDeleteConversation={requestDeleteConversation}
         currentId={currConversationId}
         copyRight={APP_INFO.copyright || APP_INFO.title}
       />
@@ -670,25 +709,25 @@ const Main: FC<IMainProps> = () => {
   if (!APP_ID || !APP_INFO || !promptConfig) { return <Loading type='app' /> }
 
   return (
-    <div className='bg-gray-100'>
+    <div className='min-h-screen bg-[#EEF2F7]'>
       <Header
         title={APP_INFO.title}
         isMobile={isMobile}
         onShowSideBar={showSidebar}
         onCreateNewChat={() => handleConversationIdChange('-1')}
       />
-      <div className="flex rounded-t-2xl bg-white overflow-hidden">
+      <div className="flex overflow-hidden bg-[#F7F8FB] pc:rounded-t-2xl">
         {/* sidebar */}
         {!isMobile && renderSidebar()}
         {isMobile && isShowSidebar && (
-          <div className='fixed inset-0 z-50' style={{ backgroundColor: 'rgba(35, 56, 118, 0.2)' }} onClick={hideSidebar} >
-            <div className='inline-block' onClick={e => e.stopPropagation()}>
+          <div className='fixed inset-0 z-50 bg-gray-900/30 backdrop-blur-[2px]' onClick={hideSidebar} >
+            <div className='inline-block h-full shadow-2xl' onClick={e => e.stopPropagation()}>
               {renderSidebar()}
             </div>
           </div>
         )}
         {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto'>
+        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto bg-[linear-gradient(180deg,_#F7F8FB_0%,_#FFFFFF_48%,_#F8FAFC_100%)] mobile:h-[calc(100vh_-_3rem_-_env(safe-area-inset-top))]'>
           <ConfigSence
             conversationName={conversationName}
             hasSetInputs={hasSetInputs}
@@ -703,7 +742,7 @@ const Main: FC<IMainProps> = () => {
 
           {
             hasSetInputs && (
-              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full pb-[180px] mx-auto mb-3.5' ref={chatListDomRef}>
+              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full mobile:pb-[176px] tablet:pb-[190px] mx-auto mb-3.5' ref={chatListDomRef}>
                 <Chat
                   chatList={chatList}
                   onSend={handleSend}
@@ -717,6 +756,30 @@ const Main: FC<IMainProps> = () => {
           }
         </div>
       </div>
+      {deleteConversationId && (
+        <div className='fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/30 px-4'>
+          <div className='w-full max-w-[360px] rounded-xl bg-white p-5 shadow-xl'>
+            <div className='text-base font-semibold text-gray-900'>{t('common.operation.delete')}</div>
+            <div className='mt-2 text-sm leading-6 text-gray-500'>{t('app.chat.deleteConversationConfirm')}</div>
+            <div className='mt-5 flex justify-end gap-2'>
+              <button
+                type='button'
+                className='h-9 rounded-lg border border-gray-200 px-4 text-sm text-gray-600 hover:bg-gray-50'
+                onClick={() => setDeleteConversationId(null)}
+              >
+                {t('common.operation.cancel')}
+              </button>
+              <button
+                type='button'
+                className='h-9 rounded-lg bg-red-600 px-4 text-sm text-white hover:bg-red-700'
+                onClick={handleDeleteConversation}
+              >
+                {t('common.operation.delete')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

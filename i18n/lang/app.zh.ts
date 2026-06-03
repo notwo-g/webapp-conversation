@@ -15,6 +15,7 @@ const translation = {
     configStatusDes: '开始前，您可以修改对话设置',
     configDisabled: '此次会话已使用上次会话表单',
     startChat: '开始对话',
+    deleteConversationConfirm: '确定要删除这条对话记录吗？此操作不可撤销。',
     privacyPolicyLeft: '请阅读由该应用开发者提供的',
     privacyPolicyMiddle: '隐私政策',
     privacyPolicyRight: '。',

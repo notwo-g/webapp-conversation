@@ -109,13 +109,13 @@ const Welcome: FC<IWelcomeProps> = ({
                 placeholder={`${item.name}${!item.required ? `(${t('app.variableTable.optional')})` : ''}`}
                 value={inputs?.[item.key] || ''}
                 onChange={(e) => { setInputs({ ...inputs, [item.key]: e.target.value }) }}
-                className={'w-full flex-grow py-2 pl-3 pr-3 box-border rounded-lg bg-gray-50'}
+                className={'w-full flex-grow py-2 pl-3 pr-3 box-border rounded-lg border border-gray-200 bg-white text-gray-900 outline-none transition focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100'}
                 maxLength={item.max_length || DEFAULT_VALUE_MAX_LEN}
               />
             )}
             {item.type === 'paragraph' && (
               <textarea
-                className="w-full h-[104px] flex-grow py-2 pl-3 pr-3 box-border rounded-lg bg-gray-50"
+                className="w-full h-[104px] flex-grow py-2 pl-3 pr-3 box-border rounded-lg border border-gray-200 bg-white text-gray-900 outline-none transition focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100"
                 placeholder={`${item.name}${!item.required ? `(${t('app.variableTable.optional')})` : ''}`}
                 value={inputs?.[item.key] || ''}
                 onChange={(e) => { setInputs({ ...inputs, [item.key]: e.target.value }) }}
@@ -172,33 +172,34 @@ const Welcome: FC<IWelcomeProps> = ({
   }
 
   const canChat = () => {
-    const vars = promptConfig?.prompt_variables ?? [];
+    const vars = promptConfig?.prompt_variables ?? []
 
-    const hasEmptyRequired = vars.some(v => {
-      const isRequired = v?.required ?? true;
-      if (!isRequired) return false;
+    const hasEmptyRequired = vars.some((v) => {
+      const isRequired = v?.required ?? true
+      if (!isRequired) { return false }
 
-      const val = inputs?.[v.key];
+      const val = inputs?.[v.key]
 
-      if (typeof val === 'string') return val.trim() === '';
+      if (typeof val === 'string') { return val.trim() === '' }
 
-      return val === undefined || val === null;
-    });
+      return val === undefined || val === null
+    })
 
     if (hasEmptyRequired) {
-      logError(t('app.errorMessage.valueOfVarRequired'));
-      return false;
+      logError(t('app.errorMessage.valueOfVarRequired'))
+      return false
     }
 
-    return true;
-  };
+    return true
+  }
 
   const handleChat = () => {
     if (!canChat()) { return }
 
     Object.keys(inputs).forEach((key) => {
-      if (!inputs[key])
+      if (!inputs[key]) {
         delete inputs[key]
+      }
     })
 
     onStartChat(inputs)
@@ -353,46 +354,48 @@ const Welcome: FC<IWelcomeProps> = ({
   return (
     <div className='relative mobile:min-h-[48px] tablet:min-h-[64px]'>
       {hasSetInputs && renderHeader()}
-      <div className='mx-auto pc:w-[794px] max-w-full mobile:w-full px-3.5'>
-        {/*  Has't set inputs  */}
-        {
-          !hasSetInputs && (
-            <div className='mobile:pt-[72px] tablet:pt-[128px] pc:pt-[200px]'>
-              {hasVar
-                ? (
-                  renderVarPanel()
-                )
-                : (
-                  renderNoVarPanel()
-                )}
-            </div>
-          )
-        }
-
-        {/* Has set inputs */}
-        {hasSetInputs && renderHasSetInputs()}
-
-        {/* foot */}
-        {!hasSetInputs && (
-          <div className='mt-4 flex justify-between items-center h-8 text-xs text-gray-400'>
-
-            {siteInfo.privacy_policy
-              ? <div>{t('app.chat.privacyPolicyLeft')}
-                <a
-                  className='text-gray-500'
-                  href={siteInfo.privacy_policy}
-                  target='_blank'
-                >{t('app.chat.privacyPolicyMiddle')}</a>
-                {t('app.chat.privacyPolicyRight')}
+      <div className={`${!hasSetInputs ? 'min-h-[calc(100vh_-_3rem)] bg-[radial-gradient(circle_at_top_left,_rgba(28,100,242,0.10),_transparent_30%),linear-gradient(180deg,_#F9FAFB_0%,_#FFFFFF_58%)]' : ''}`}>
+        <div className='mx-auto pc:w-[794px] max-w-full mobile:w-full px-3.5'>
+          {/*  Has't set inputs  */}
+          {
+            !hasSetInputs && (
+              <div className='mobile:pt-8 tablet:pt-[96px] pc:pt-[128px]'>
+                {hasVar
+                  ? (
+                    renderVarPanel()
+                  )
+                  : (
+                    renderNoVarPanel()
+                  )}
               </div>
-              : <div>
-              </div>}
-            <a className='flex items-center pr-3 space-x-3' href="https://dify.ai/" target="_blank">
-              <span className='uppercase'>{t('app.chat.powerBy')}</span>
-              <FootLogo />
-            </a>
-          </div>
-        )}
+            )
+          }
+
+          {/* Has set inputs */}
+          {hasSetInputs && renderHasSetInputs()}
+
+          {/* foot */}
+          {!hasSetInputs && (
+            <div className='mt-4 flex min-h-8 items-center justify-between gap-3 pb-[calc(env(safe-area-inset-bottom)+24px)] text-xs text-gray-400 mobile:flex-col mobile:items-start tablet:flex-row tablet:items-center'>
+
+              {siteInfo.privacy_policy
+                ? <div>{t('app.chat.privacyPolicyLeft')}
+                  <a
+                    className='text-gray-500 hover:text-gray-700'
+                    href={siteInfo.privacy_policy}
+                    target='_blank'
+                  >{t('app.chat.privacyPolicyMiddle')}</a>
+                  {t('app.chat.privacyPolicyRight')}
+                </div>
+                : <div>
+                </div>}
+              <a className='flex items-center space-x-3' href="https://dify.ai/" target="_blank">
+                <span className='uppercase'>{t('app.chat.powerBy')}</span>
+                <FootLogo />
+              </a>
+            </div>
+          )}
+        </div>
       </div>
     </div >
   )

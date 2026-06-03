@@ -18,27 +18,29 @@ const Header: FC<IHeaderProps> = ({
   onCreateNewChat,
 }) => {
   return (
-    <div className="shrink-0 flex items-center justify-between h-12 px-3 bg-gray-100">
-      {isMobile
-        ? (
-          <div
-            className='flex items-center justify-center h-8 w-8 cursor-pointer'
-            onClick={() => onShowSideBar?.()}
-          >
-            <Bars3Icon className="h-4 w-4 text-gray-500" />
-          </div>
-        )
-        : <div></div>}
-      <div className='flex items-center space-x-2'>
-        <AppIcon size="small" />
-        <div className=" text-sm text-gray-800 font-bold">{title}</div>
+    <div className="shrink-0 border-b border-white/70 bg-[#F7F8FB]/95 backdrop-blur mobile:pt-[env(safe-area-inset-top)]">
+      <div className="relative flex h-12 items-center justify-between px-3">
+        {isMobile
+          ? (
+            <div
+              className='flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm active:scale-95'
+              onClick={() => onShowSideBar?.()}
+            >
+              <Bars3Icon className="h-4 w-4" />
+            </div>
+          )
+          : <div></div>}
+        <div className='absolute left-1/2 flex max-w-[calc(100%-112px)] -translate-x-1/2 items-center space-x-2'>
+          <AppIcon size="tiny" className='shadow-sm' />
+          <div className="truncate text-sm font-semibold text-gray-900">{title}</div>
+        </div>
+        {isMobile
+          ? (
+            <div className='flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm active:scale-95' onClick={() => onCreateNewChat?.()} >
+              <PencilSquareIcon className="h-4 w-4" />
+            </div>)
+          : <div></div>}
       </div>
-      {isMobile
-        ? (
-          <div className='flex items-center justify-center h-8 w-8 cursor-pointer' onClick={() => onCreateNewChat?.()} >
-            <PencilSquareIcon className="h-4 w-4 text-gray-500" />
-          </div>)
-        : <div></div>}
     </div>
   )
 }

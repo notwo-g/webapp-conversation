@@ -70,6 +70,8 @@ const translation = {
     testResultPlaceholder: 'テスト結果はここに表示されます',
   },
   thought: {
+    thinking: '思考中',
+    thoughtProcess: '思考プロセス',
     using: '使用中',
     used: '使用済み',
     requestTitle: 'リクエスト先',

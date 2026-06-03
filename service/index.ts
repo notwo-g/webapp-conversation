@@ -1,5 +1,5 @@
 import type { IOnCompleted, IOnData, IOnError, IOnFile, IOnMessageEnd, IOnMessageReplace, IOnNodeFinished, IOnNodeStarted, IOnThought, IOnWorkflowFinished, IOnWorkflowStarted } from './base'
-import { get, post, ssePost } from './base'
+import { del, get, post, ssePost } from './base'
 import type { Feedbacktype } from '@/types/app'
 
 export const sendChatMessage = async (
@@ -42,6 +42,10 @@ export const sendChatMessage = async (
 
 export const fetchConversations = async () => {
   return get('conversations', { params: { limit: 100, first_id: '' } })
+}
+
+export const deleteConversation = async (conversationId: string) => {
+  return del(`conversations?conversation_id=${encodeURIComponent(conversationId)}`)
 }
 
 export const fetchChatList = async (conversationId: string) => {

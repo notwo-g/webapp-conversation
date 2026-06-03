@@ -3,8 +3,8 @@ import type { FC } from 'react'
 import type { FeedbackFunc } from '../type'
 import type { ChatItem, MessageRating, VisionFile } from '@/types/app'
 import type { Emoji } from '@/types/tools'
-import { HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline'
-import React from 'react'
+import { ChevronDownIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '@/app/components/base/button'
 import StreamdownMarkdown from '@/app/components/base/streamdown-markdown'
@@ -63,6 +63,91 @@ const IconWrapper: FC<{ children: React.ReactNode | string }> = ({ children }) =
   )
 }
 
+const THINK_BLOCK_REGEX = /<think>([\s\S]*?)(?:<\/think>|$)/gi
+
+const splitThinkContent = (content: string) => {
+  const thoughts: string[] = []
+  const answer = content.replace(THINK_BLOCK_REGEX, (_match, thought) => {
+    if (thought?.trim()) { thoughts.push(thought.trim()) }
+    return ''
+  }).trim()
+
+  return {
+    thought: thoughts.join('\n\n'),
+    answer,
+  }
+}
+
+const CollapsibleThought: FC<{ content: string, isResponding?: boolean, title?: string }> = ({
+  content,
+  isResponding,
+  title,
+}) => {
+  const { t } = useTranslation()
+  const [isOpen, setIsOpen] = useState(!!isResponding)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const startedAtRef = useRef<number | null>(null)
+  const hasThoughtContent = !!content?.trim()
+
+  useEffect(() => {
+    setIsOpen(!!isResponding)
+  }, [isResponding])
+
+  useEffect(() => {
+    if (!hasThoughtContent) {
+      startedAtRef.current = null
+      setElapsedSeconds(0)
+      return
+    }
+
+    if (!startedAtRef.current) {
+      startedAtRef.current = Date.now()
+      setElapsedSeconds(0)
+    }
+
+    const updateElapsed = () => {
+      if (!startedAtRef.current) { return }
+      setElapsedSeconds(Math.max(1, Math.floor((Date.now() - startedAtRef.current) / 1000)))
+    }
+
+    if (!isResponding) {
+      updateElapsed()
+      return
+    }
+
+    const timer = window.setInterval(updateElapsed, 1000)
+
+    return () => {
+      window.clearInterval(timer)
+      updateElapsed()
+    }
+  }, [hasThoughtContent, isResponding])
+
+  if (!hasThoughtContent) { return null }
+
+  return (
+    <div className="mb-3 overflow-hidden rounded-lg border border-gray-200 bg-white/70">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs font-medium text-gray-600 hover:bg-gray-50"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className={`h-1.5 w-1.5 flex-shrink-0 rounded-full ${isResponding ? 'animate-pulse bg-primary-600' : 'bg-green-800'}`} />
+          <span className="truncate">{title || (isResponding ? t('tools.thought.thinking') : t('tools.thought.thoughtProcess'))}</span>
+          <span className="flex-shrink-0 text-gray-400">{elapsedSeconds}s</span>
+        </span>
+        <ChevronDownIcon className={`${isOpen ? 'rotate-180' : ''} h-4 w-4 flex-shrink-0 text-gray-400 transition-transform`} />
+      </button>
+      {isOpen && (
+        <div className="max-h-[360px] overflow-y-auto border-t border-gray-100 px-3 py-2 text-xs leading-5 text-gray-600">
+          <StreamdownMarkdown content={content} />
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface IAnswerProps {
   item: ChatItem
   feedbackDisabled: boolean
@@ -85,6 +170,7 @@ const Answer: FC<IAnswerProps> = ({
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
 
   const { t } = useTranslation()
+  const contentWithThink = useMemo(() => splitThinkContent(content), [content])
 
   /**
    * Render feedback results (distinguish between users and administrators)
@@ -151,12 +237,26 @@ const Answer: FC<IAnswerProps> = ({
     return list.filter(file => file.type === 'image' && file.belongs_to === 'assistant')
   }
 
+  const renderThoughtContent = (thoughtContent: string, hasTool: boolean) => {
+    const parsed = splitThinkContent(thoughtContent)
+    const visibleAnswer = parsed.thought ? parsed.answer : thoughtContent
+
+    return (
+      <>
+        <CollapsibleThought content={parsed.thought || (hasTool ? thoughtContent : '')} isResponding={isResponding} />
+        {visibleAnswer && !hasTool && (
+          <StreamdownMarkdown content={visibleAnswer} />
+        )}
+      </>
+    )
+  }
+
   const agentModeAnswer = (
     <div>
       {agent_thoughts?.map((item, index) => (
         <div key={index}>
           {item.thought && (
-            <StreamdownMarkdown content={item.thought} />
+            renderThoughtContent(item.thought, !!item.tool)
           )}
           {/* {item.tool} */}
           {/* perhaps not use tool */}
@@ -179,7 +279,7 @@ const Answer: FC<IAnswerProps> = ({
   return (
     <div key={id}>
       <div className="flex items-start">
-        <div className={`${s.answerIcon} w-10 h-10 shrink-0`}>
+        <div className={`${s.answerIcon} h-8 w-8 shrink-0 rounded-full shadow-sm tablet:h-10 tablet:w-10`}>
           {isResponding
             && (
               <div className={s.typeingIcon}>
@@ -187,9 +287,9 @@ const Answer: FC<IAnswerProps> = ({
               </div>
             )}
         </div>
-        <div className={`${s.answerWrap} max-w-[calc(100%-3rem)]`}>
+        <div className={`${s.answerWrap} min-w-0 max-w-[84%] tablet:max-w-[calc(100%-3rem)]`}>
           <div className={`${s.answer} relative text-sm text-gray-900`}>
-            <div className={`ml-2 py-3 px-4 bg-gray-100 rounded-tr-2xl rounded-b-2xl ${workflowProcess && 'min-w-[480px]'}`}>
+            <div className={`ml-2 rounded-[18px] rounded-tl-md border border-gray-200 bg-white px-4 py-3 leading-6 shadow-sm ${workflowProcess && 'tablet:min-w-[480px]'}`}>
               {workflowProcess && (
                 <WorkflowProcess data={workflowProcess} hideInfo />
               )}
@@ -202,7 +302,12 @@ const Answer: FC<IAnswerProps> = ({
                 : (isAgentMode
                   ? agentModeAnswer
                   : (
-                    <StreamdownMarkdown content={content} />
+                    <>
+                      <CollapsibleThought content={contentWithThink.thought} isResponding={isResponding} />
+                      {(contentWithThink.thought ? contentWithThink.answer : content) && (
+                        <StreamdownMarkdown content={contentWithThink.thought ? contentWithThink.answer : content} />
+                      )}
+                    </>
                   ))}
               {suggestedQuestions.length > 0 && (
                 <div className="mt-3">

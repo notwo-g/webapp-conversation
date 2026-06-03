@@ -15,10 +15,10 @@ const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSr
   const userName = ''
   return (
     <div className='flex items-start justify-end' key={id}>
-      <div>
+      <div className='min-w-0 max-w-[82%] tablet:max-w-[78%]'>
         <div className={`${s.question} relative text-sm text-gray-900`}>
           <div
-            className={'mr-2 py-3 px-4 bg-blue-500 rounded-tl-2xl rounded-b-2xl'}
+            className={'mr-2 rounded-[18px] rounded-tr-md bg-primary-600 px-4 py-3 text-white shadow-sm'}
           >
             {imgSrcs && imgSrcs.length > 0 && (
               <ImageGallery srcs={imgSrcs} />
@@ -29,12 +29,12 @@ const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSr
       </div>
       {useCurrentUserAvatar
         ? (
-          <div className='w-10 h-10 shrink-0 leading-10 text-center mr-2 rounded-full bg-primary-600 text-white'>
+          <div className='mr-1 h-8 w-8 shrink-0 rounded-full bg-primary-600 text-center text-sm leading-8 text-white shadow-sm tablet:mr-2 tablet:h-10 tablet:w-10 tablet:leading-10'>
             {userName?.[0].toLocaleUpperCase()}
           </div>
         )
         : (
-          <div className={`${s.questionIcon} w-10 h-10 shrink-0 `}></div>
+          <div className={`${s.questionIcon} mr-1 h-8 w-8 shrink-0 shadow-sm tablet:mr-0 tablet:h-10 tablet:w-10`}></div>
         )}
     </div>
   )

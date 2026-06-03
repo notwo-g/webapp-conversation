@@ -16,6 +16,7 @@ const translation = {
     configDisabled:
       'Previous session settings have been used for this session.',
     startChat: 'Start Chat',
+    deleteConversationConfirm: 'Delete this conversation? This action cannot be undone.',
     privacyPolicyLeft:
       'Please read the ',
     privacyPolicyMiddle:

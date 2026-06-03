@@ -14,6 +14,7 @@ const translation = {
     search: '検索',
     send: '送信',
     lineBreak: '改行',
+    delete: '削除',
     like: 'いいね',
     dislike: 'よくないね',
     ok: 'OK',

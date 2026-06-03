@@ -24,8 +24,18 @@ export const getLocaleOnServer = async (): Promise<Locale> => {
     languages = new Negotiator({ headers: negotiatorHeaders }).languages()
   }
 
-  // match locale (filter out empty strings to avoid RangeError)
-  const cleanLanguages = languages.filter(Boolean)
+  // match locale (filter out invalid language tags to avoid RangeError)
+  const cleanLanguages = languages.filter((language) => {
+    if (!language || language === '*') { return false }
+
+    try {
+      Intl.getCanonicalLocales(language)
+      return true
+    }
+    catch {
+      return false
+    }
+  })
   const matchedLocale = (cleanLanguages.length > 0
     ? match(cleanLanguages, locales, i18n.defaultLocale)
     : i18n.defaultLocale) as Locale

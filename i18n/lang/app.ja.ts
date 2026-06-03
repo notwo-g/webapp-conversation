@@ -16,6 +16,7 @@ const translation = {
     configDisabled:
       '前回のセッション設定がこのセッションで使用されています。',
     startChat: '開始',
+    deleteConversationConfirm: 'この会話を削除しますか？この操作は元に戻せません。',
     privacyPolicyLeft:
       'ご利用前に、',
     privacyPolicyMiddle:

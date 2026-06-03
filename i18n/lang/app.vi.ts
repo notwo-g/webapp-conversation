@@ -16,6 +16,7 @@ const translation = {
     configDisabled:
       'Cài đặt của phiên trước đã được sử dụng cho phiên này.',
     startChat: 'Bắt đầu trò chuyện',
+    deleteConversationConfirm: 'Xoa cuoc tro chuyen nay? Khong the hoan tac thao tac nay.',
     privacyPolicyLeft:
       'Vui lòng đọc ',
     privacyPolicyMiddle:

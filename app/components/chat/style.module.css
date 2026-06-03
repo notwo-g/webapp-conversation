@@ -1,6 +1,7 @@
 .answerIcon {
   position: relative;
   background: url(./icons/robot.svg);
+  background-size: contain;
 }
 
 .typeingIcon {
@@ -26,7 +27,7 @@
 
 .answer::before,
 .question::before {
-  content: '';
+  content: none;
   position: absolute;
   top: 0;
   width: 8px;
@@ -74,12 +75,27 @@
 }
 
 .sendBtn {
-  background: url(./icons/send.svg) center center no-repeat;
+  position: relative;
+  background-image: none;
+  background-color: #1C64F2;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(28, 100, 242, 0.28);
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.sendBtn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: #FFFFFF;
+  mask: url(./icons/send.svg) center center / 32px 32px no-repeat;
+  -webkit-mask: url(./icons/send.svg) center center / 32px 32px no-repeat;
 }
 
 .sendBtn:hover {
-  background-image: url(./icons/send-active.svg);
-  background-color: #EBF5FF;
+  background-color: #1A56DB;
+  box-shadow: 0 10px 22px rgba(28, 100, 242, 0.34);
+  transform: translateY(-1px);
 }
 
 .textArea:focus+div .count {
@@ -87,5 +103,5 @@
 }
 
 .textArea:focus+div .sendBtn {
-  background-image: url(./icons/send-active.svg);
+  background-color: #1A56DB;
 }

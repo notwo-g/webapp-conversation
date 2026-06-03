@@ -70,6 +70,8 @@ const translation = {
     testResultPlaceholder: 'Test result will show here',
   },
   thought: {
+    thinking: 'Thinking',
+    thoughtProcess: 'Thought process',
     using: 'Using',
     used: 'Used',
     requestTitle: 'Request to',

@@ -14,6 +14,7 @@ const translation = {
     search: '搜索',
     send: '发送',
     lineBreak: '换行',
+    delete: '删除',
     like: '赞同',
     dislike: '反对',
     ok: '好的',
