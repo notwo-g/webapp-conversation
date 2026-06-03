@@ -17,6 +17,12 @@ const translation = {
       'Les paramètres de la session précédente ont été utilisés pour cette session.',
     startChat: 'Démarrer la conversation',
     deleteConversationConfirm: 'Supprimer cette conversation ? Cette action est irreversible.',
+    responseStageUnderstanding: 'Understanding your question',
+    responseStageContext: 'Checking context',
+    responseStageComposing: 'Composing answer',
+    responseStreaming: 'Writing',
+    responseCompleted: 'Completed',
+    firstTokenIn: 'first token in',
     privacyPolicyLeft:
       'Veuillez lire la ',
     privacyPolicyMiddle:

@@ -17,6 +17,12 @@ const translation = {
       'La configuración de la sesión anterior se ha utilizado para esta sesión.',
     startChat: 'Comenzar chat',
     deleteConversationConfirm: 'Eliminar esta conversacion? Esta accion no se puede deshacer.',
+    responseStageUnderstanding: 'Understanding your question',
+    responseStageContext: 'Checking context',
+    responseStageComposing: 'Composing answer',
+    responseStreaming: 'Writing',
+    responseCompleted: 'Completed',
+    firstTokenIn: 'first token in',
     privacyPolicyLeft:
       'Por favor lea la ',
     privacyPolicyMiddle:

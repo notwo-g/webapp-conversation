@@ -17,6 +17,12 @@ const translation = {
       'Previous session settings have been used for this session.',
     startChat: 'Start Chat',
     deleteConversationConfirm: 'Delete this conversation? This action cannot be undone.',
+    responseStageUnderstanding: 'Understanding your question',
+    responseStageContext: 'Checking context',
+    responseStageComposing: 'Composing answer',
+    responseStreaming: 'Writing',
+    responseCompleted: 'Completed',
+    firstTokenIn: 'first token in',
     privacyPolicyLeft:
       'Please read the ',
     privacyPolicyMiddle:

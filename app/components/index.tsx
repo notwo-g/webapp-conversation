@@ -441,10 +441,15 @@ const Main: FC<IMainProps> = () => {
     }
 
     const placeholderAnswerId = `answer-placeholder-${Date.now()}`
+    const responseStartedAt = Date.now()
     const placeholderAnswerItem = {
       id: placeholderAnswerId,
       content: '',
       isAnswer: true,
+      responseMeta: {
+        startedAt: responseStartedAt,
+        status: 'waiting' as const,
+      },
     }
 
     const newList = [...getChatList(), questionItem, placeholderAnswerItem]
@@ -459,6 +464,10 @@ const Main: FC<IMainProps> = () => {
       agent_thoughts: [],
       message_files: [],
       isAnswer: true,
+      responseMeta: {
+        startedAt: responseStartedAt,
+        status: 'waiting',
+      },
     }
     let hasSetResponseId = false
 
@@ -471,6 +480,13 @@ const Main: FC<IMainProps> = () => {
         setAbortController(abortController)
       },
       onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId }: any) => {
+        if (!responseItem.responseMeta?.firstTokenAt) {
+          responseItem.responseMeta = {
+            ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
+            firstTokenAt: Date.now(),
+            status: 'streaming',
+          }
+        }
         if (!isAgentMode) {
           responseItem.content = responseItem.content + message
         }
@@ -501,6 +517,11 @@ const Main: FC<IMainProps> = () => {
       async onCompleted(hasError?: boolean) {
         try {
           if (hasError) { return }
+          responseItem.responseMeta = {
+            ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
+            completedAt: Date.now(),
+            status: 'completed',
+          }
 
           if (getConversationIdChangeBecauseOfNew()) {
             const { data: allConversations }: any = await fetchConversations()
@@ -544,6 +565,13 @@ const Main: FC<IMainProps> = () => {
       },
       onThought(thought) {
         isAgentMode = true
+        if (!responseItem.responseMeta?.firstTokenAt) {
+          responseItem.responseMeta = {
+            ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
+            firstTokenAt: Date.now(),
+            status: 'streaming',
+          }
+        }
         const response = responseItem as any
         if (thought.message_id && !hasSetResponseId) {
           response.id = thought.message_id
@@ -579,6 +607,11 @@ const Main: FC<IMainProps> = () => {
         })
       },
       onMessageEnd: (messageEnd) => {
+        responseItem.responseMeta = {
+          ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
+          completedAt: Date.now(),
+          status: 'completed',
+        }
         if (messageEnd.metadata?.annotation_reply) {
           responseItem.id = messageEnd.id
           responseItem.annotation = ({

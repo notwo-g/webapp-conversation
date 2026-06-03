@@ -61,6 +61,12 @@ export interface MessageMore {
 export interface IChatItem {
   id: string
   content: string
+  responseMeta?: {
+    startedAt: number
+    firstTokenAt?: number
+    completedAt?: number
+    status?: 'waiting' | 'streaming' | 'completed'
+  }
   /**
    * Specific message type
    */

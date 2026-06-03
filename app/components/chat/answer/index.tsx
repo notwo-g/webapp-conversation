@@ -148,6 +148,81 @@ const CollapsibleThought: FC<{ content: string, isResponding?: boolean, title?: 
   )
 }
 
+const ResponseSpeedStatus: FC<{ item: ChatItem, isResponding?: boolean, hasVisibleContent: boolean }> = ({
+  item,
+  isResponding,
+  hasVisibleContent,
+}) => {
+  const { t } = useTranslation()
+  const [now, setNow] = useState(Date.now())
+  const meta = item.responseMeta
+  const metaStatus = meta?.status
+
+  useEffect(() => {
+    if (!metaStatus || metaStatus === 'completed') { return }
+
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [metaStatus])
+
+  if (!meta) { return null }
+
+  const firstTokenSeconds = meta.firstTokenAt
+    ? Math.max(1, Math.ceil((meta.firstTokenAt - meta.startedAt) / 1000))
+    : Math.max(1, Math.ceil((now - meta.startedAt) / 1000))
+  const totalSeconds = meta.completedAt
+    ? Math.max(1, Math.ceil((meta.completedAt - meta.startedAt) / 1000))
+    : Math.max(1, Math.ceil((now - meta.startedAt) / 1000))
+  const waitStage = firstTokenSeconds < 2
+    ? t('app.chat.responseStageUnderstanding')
+    : firstTokenSeconds < 4
+      ? t('app.chat.responseStageContext')
+      : t('app.chat.responseStageComposing')
+
+  if (!hasVisibleContent && isResponding) {
+    return (
+      <div className='min-w-[220px] space-y-3'>
+        <div className='flex items-center gap-2 text-xs font-medium text-primary-600'>
+          <span className='h-1.5 w-1.5 rounded-full bg-primary-600 animate-pulse' />
+          <span>{waitStage}</span>
+          <span className='text-gray-400'>{firstTokenSeconds}s</span>
+        </div>
+        <div className='space-y-2'>
+          <div className='h-2.5 w-[92%] overflow-hidden rounded-full bg-gray-100'>
+            <div className='h-full w-1/2 animate-pulse rounded-full bg-gradient-to-r from-gray-100 via-primary-100 to-gray-100' />
+          </div>
+          <div className='h-2.5 w-[72%] overflow-hidden rounded-full bg-gray-100'>
+            <div className='h-full w-1/2 animate-pulse rounded-full bg-gradient-to-r from-gray-100 via-primary-100 to-gray-100' />
+          </div>
+          <div className='h-2.5 w-[46%] overflow-hidden rounded-full bg-gray-100'>
+            <div className='h-full w-1/2 animate-pulse rounded-full bg-gradient-to-r from-gray-100 via-primary-100 to-gray-100' />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (meta.status === 'completed') {
+    return (
+      <div className='mt-3 flex items-center gap-2 text-xs text-gray-400'>
+        <span className='h-1.5 w-1.5 rounded-full bg-green-800' />
+        <span>{t('app.chat.responseCompleted')} · {totalSeconds}s</span>
+      </div>
+    )
+  }
+
+  if (isResponding && hasVisibleContent) {
+    return (
+      <div className='mb-2 flex items-center gap-2 text-xs text-gray-400'>
+        <span className='h-1.5 w-1.5 rounded-full bg-primary-600 animate-pulse' />
+        <span>{t('app.chat.responseStreaming')} · {t('app.chat.firstTokenIn')} {firstTokenSeconds}s</span>
+      </div>
+    )
+  }
+
+  return null
+}
+
 interface IAnswerProps {
   item: ChatItem
   feedbackDisabled: boolean
@@ -171,6 +246,9 @@ const Answer: FC<IAnswerProps> = ({
 
   const { t } = useTranslation()
   const contentWithThink = useMemo(() => splitThinkContent(content), [content])
+  const hasVisibleContent = isAgentMode
+    ? (agent_thoughts || []).some(item => !!item.thought || !!item.tool || (item.message_files || []).some(file => file.type === 'image' && file.belongs_to === 'assistant'))
+    : !!(contentWithThink.thought || contentWithThink.answer || content)
 
   /**
    * Render feedback results (distinguish between users and administrators)
@@ -295,20 +373,28 @@ const Answer: FC<IAnswerProps> = ({
               )}
               {(isResponding && (isAgentMode ? (!content && (agent_thoughts || []).filter(item => !!item.thought || !!item.tool).length === 0) : !content))
                 ? (
-                  <div className="flex items-center justify-center w-6 h-5">
-                    <LoadingAnim type="text" />
-                  </div>
+                  <ResponseSpeedStatus item={item} isResponding={isResponding} hasVisibleContent={false} />
                 )
-                : (isAgentMode
-                  ? agentModeAnswer
-                  : (
-                    <>
-                      <CollapsibleThought content={contentWithThink.thought} isResponding={isResponding} />
-                      {(contentWithThink.thought ? contentWithThink.answer : content) && (
-                        <StreamdownMarkdown content={contentWithThink.thought ? contentWithThink.answer : content} />
+                : (
+                  <>
+                    {isResponding && (
+                      <ResponseSpeedStatus item={item} isResponding={isResponding} hasVisibleContent={hasVisibleContent} />
+                    )}
+                    {isAgentMode
+                      ? agentModeAnswer
+                      : (
+                        <>
+                          <CollapsibleThought content={contentWithThink.thought} isResponding={isResponding} />
+                          {(contentWithThink.thought ? contentWithThink.answer : content) && (
+                            <StreamdownMarkdown content={contentWithThink.thought ? contentWithThink.answer : content} />
+                          )}
+                        </>
                       )}
-                    </>
-                  ))}
+                    {!isResponding && (
+                      <ResponseSpeedStatus item={item} isResponding={false} hasVisibleContent={hasVisibleContent} />
+                    )}
+                  </>
+                )}
               {suggestedQuestions.length > 0 && (
                 <div className="mt-3">
                   <div className="flex gap-1 mt-1 flex-wrap">
