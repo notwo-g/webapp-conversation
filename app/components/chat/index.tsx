@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import cn from 'classnames'
 import { useTranslation } from 'react-i18next'
 import Textarea from 'rc-textarea'
@@ -32,11 +32,14 @@ export interface IChatProps {
   onFeedback?: FeedbackFunc
   checkCanSend?: () => boolean
   onSend?: (message: string, files: VisionFile[]) => void
+  onStop?: () => void
   useCurrentUserAvatar?: boolean
   isResponding?: boolean
   controlClearQuery?: number
   visionConfig?: VisionSettings
   fileConfig?: FileUpload
+  scrollContainerRef?: React.RefObject<HTMLDivElement>
+  onInputHeightChange?: (height: number) => void
 }
 
 const Chat: FC<IChatProps> = ({
@@ -46,15 +49,54 @@ const Chat: FC<IChatProps> = ({
   onFeedback,
   checkCanSend,
   onSend = () => { },
+  onStop = () => { },
   useCurrentUserAvatar,
   isResponding,
   controlClearQuery,
   visionConfig,
   fileConfig,
+  scrollContainerRef,
+  onInputHeightChange,
 }) => {
   const { t } = useTranslation()
   const { notify } = Toast
   const isUseInputMethod = useRef(false)
+  const scrollBottomRef = useRef<HTMLDivElement>(null)
+  const inputAreaRef = useRef<HTMLDivElement>(null)
+
+  // auto-scroll to latest content during streaming
+  useEffect(() => {
+    if (isResponding && scrollContainerRef?.current) {
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+        }
+      })
+    }
+  }, [chatList, isResponding, scrollContainerRef])
+
+  useEffect(() => {
+    if (isHideSendInput) {
+      onInputHeightChange?.(0)
+      return
+    }
+
+    const inputArea = inputAreaRef.current
+    if (!inputArea || !onInputHeightChange) { return }
+
+    const reportHeight = () => {
+      onInputHeightChange(inputArea.getBoundingClientRect().height)
+    }
+
+    reportHeight()
+
+    if (typeof ResizeObserver === 'undefined') { return }
+
+    const observer = new ResizeObserver(reportHeight)
+    observer.observe(inputArea)
+
+    return () => observer.disconnect()
+  }, [isHideSendInput, onInputHeightChange])
 
   const [query, setQuery] = React.useState('')
   const queryRef = useRef('')
@@ -65,18 +107,18 @@ const Chat: FC<IChatProps> = ({
     queryRef.current = value
   }
 
-  const logError = (message: string) => {
+  const logError = useCallback((message: string) => {
     notify({ type: 'error', message, duration: 3000 })
-  }
+  }, [notify])
 
-  const valid = () => {
+  const valid = useCallback(() => {
     const query = queryRef.current
     if (!query || query.trim() === '') {
       logError(t('app.errorMessage.valueOfVarRequired'))
       return false
     }
     return true
-  }
+  }, [logError, t])
 
   useEffect(() => {
     if (controlClearQuery) {
@@ -96,7 +138,7 @@ const Chat: FC<IChatProps> = ({
 
   const [attachmentFiles, setAttachmentFiles] = React.useState<FileEntity[]>([])
 
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (!valid() || (checkCanSend && !checkCanSend())) { return }
     const hasPendingImageUploads = files.some(file => file.progress !== -1 && file.progress < 100)
     const hasPendingAttachmentUploads = attachmentFiles.some(file => file.progress !== -1 && file.progress < 100)
@@ -121,13 +163,18 @@ const Chat: FC<IChatProps> = ({
       }
     }
     if (!attachmentFiles.find(item => item.transferMethod === TransferMethod.local_file && !item.uploadedId)) { setAttachmentFiles([]) }
-  }
+  }, [attachmentFiles, checkCanSend, files, isResponding, logError, onClear, onSend, valid, t])
+  const handleSendRef = useRef(handleSend)
+
+  useEffect(() => {
+    handleSendRef.current = handleSend
+  }, [handleSend])
 
   const handleKeyUp = (e: any) => {
     if (e.code === 'Enter') {
       e.preventDefault()
       // prevent send message when using input method enter
-      if (!e.shiftKey && !isUseInputMethod.current) { handleSend() }
+      if (!e.shiftKey && !isUseInputMethod.current && !isResponding) { handleSend() }
     }
   }
 
@@ -141,24 +188,45 @@ const Chat: FC<IChatProps> = ({
     }
   }
 
-  const suggestionClick = (suggestion: string) => {
+  const suggestionClick = useCallback((suggestion: string) => {
     setQuery(suggestion)
     queryRef.current = suggestion
-    handleSend()
-  }
+    handleSendRef.current()
+  }, [])
+
+  const handleRetry = useCallback((question: ChatItem) => {
+    if (isResponding) {
+      logError(t('app.errorMessage.waitForResponse'))
+      return
+    }
+    if (checkCanSend && !checkCanSend()) { return }
+
+    onSend(question.content, question.message_files || [])
+  }, [checkCanSend, isResponding, logError, onSend, t])
+  const handleRetryRef = useRef(handleRetry)
+
+  useEffect(() => {
+    handleRetryRef.current = handleRetry
+  }, [handleRetry])
 
   return (
-    <div className={cn(!feedbackDisabled && 'mobile:px-3 tablet:px-3.5', 'h-full')}>
+    <div className={cn(!feedbackDisabled && 'mobile:px-3 tablet:px-3.5', 'min-h-full')}>
       {/* Chat List */}
-      <div className="h-full mobile:space-y-5 tablet:space-y-[30px] mobile:pt-4 tablet:pt-0">
-        {chatList.map((item) => {
+      <div className="min-h-full mobile:space-y-5 tablet:space-y-[30px] mobile:pt-4 tablet:pt-0">
+        {chatList.map((item, index) => {
           if (item.isAnswer) {
             const isLast = item.id === chatList[chatList.length - 1].id
+            const previousQuestion = chatList
+              .slice(0, index)
+              .reverse()
+              .find(item => !item.isAnswer)
             return <Answer
               key={item.id}
               item={item}
               feedbackDisabled={feedbackDisabled}
               onFeedback={onFeedback}
+              onRetry={previousQuestion ? () => handleRetryRef.current(previousQuestion) : undefined}
+              canRetry={!!previousQuestion && !item.feedbackDisabled && !isResponding}
               isResponding={isResponding && isLast}
               suggestionClick={suggestionClick}
             />
@@ -173,23 +241,17 @@ const Chat: FC<IChatProps> = ({
             />
           )
         })}
+        {/* scroll anchor — always scroll to this during streaming */}
+        <div ref={scrollBottomRef} className="h-[1px] w-full" />
       </div>
       {
         !isHideSendInput && (
-          <div className='fixed z-20 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full mobile:px-3 tablet:px-3.5 mobile:pb-[calc(env(safe-area-inset-bottom)+10px)] tablet:pb-5'>
-            <div className='relative max-h-[178px] overflow-y-auto rounded-2xl border border-gray-200 bg-white/95 p-2 shadow-[0_18px_42px_rgba(15,23,42,0.16)] backdrop-blur'>
-              {
-                visionConfig?.enabled && (
-                  <>
-                    <div className='absolute bottom-3 left-3 flex items-center'>
-                      <ChatImageUploader
-                        settings={visionConfig}
-                        onUpload={onUpload}
-                        disabled={files.length >= visionConfig.number_limits}
-                      />
-                      <div className='mx-1 w-[1px] h-4 bg-black/5' />
-                    </div>
-                    <div className='pl-[52px]'>
+          <div ref={inputAreaRef} className='fixed z-20 bottom-0 left-1/2 transform -translate-x-1/2 pc:ml-[122px] tablet:ml-[96px] mobile:ml-0 pc:w-[794px] tablet:w-[794px] max-w-full mobile:w-full mobile:px-3 tablet:px-3.5 mobile:pb-[calc(env(safe-area-inset-bottom)+10px)] tablet:pb-5'>
+            <div className='rounded-2xl border border-gray-200 bg-white/95 shadow-[0_18px_42px_rgba(15,23,42,0.16)] backdrop-blur'>
+              <div className='max-h-[178px] overflow-y-auto rounded-2xl'>
+                {
+                  visionConfig?.enabled && (
+                    <div className='pl-3 pt-3'>
                       <ImageList
                         list={files}
                         onRemove={onRemove}
@@ -198,44 +260,66 @@ const Chat: FC<IChatProps> = ({
                         onImageLinkLoadError={onImageLinkLoadError}
                       />
                     </div>
-                  </>
-                )
-              }
-              {
-                fileConfig?.enabled && (
-                  <div className={`${visionConfig?.enabled ? 'pl-[52px]' : ''} mb-1`}>
-                    <FileUploaderInAttachmentWrapper
-                      fileConfig={fileConfig}
-                      value={attachmentFiles}
-                      onChange={setAttachmentFiles}
-                    />
-                  </div>
-                )
-              }
-              <Textarea
-                className={`
-                  block w-full min-h-11 px-2 pr-[104px] py-3 leading-5 max-h-none text-[15px] text-gray-800 outline-none appearance-none resize-none placeholder:text-gray-400
-                  ${visionConfig?.enabled && 'pl-12'}
-                `}
-                value={query}
-                onChange={handleContentChange}
-                onKeyUp={handleKeyUp}
-                onKeyDown={handleKeyDown}
-                autoSize
-              />
-              <div className="absolute bottom-3 right-4 flex items-center h-8">
-                <div className={`${s.count} mr-2 h-5 leading-5 text-xs bg-gray-50 text-gray-400 px-2 rounded-full mobile:hidden tablet:block`}>{query.trim().length}</div>
-                <Tooltip
-                  selector='send-tip'
-                  htmlContent={
-                    <div>
-                      <div>{t('common.operation.send')} Enter</div>
-                      <div>{t('common.operation.lineBreak')} Shift Enter</div>
+                  )
+                }
+                {
+                  fileConfig?.enabled && (
+                    <div className='px-3 pt-2'>
+                      <FileUploaderInAttachmentWrapper
+                        fileConfig={fileConfig}
+                        value={attachmentFiles}
+                        onChange={setAttachmentFiles}
+                      />
                     </div>
-                  }
-                >
-                  <div className={`${s.sendBtn} w-8 h-8 cursor-pointer rounded-md`} onClick={handleSend}></div>
-                </Tooltip>
+                  )
+                }
+                <Textarea
+                  className={`
+                    block w-full min-h-11 px-4 py-3 leading-5 max-h-none text-[15px] text-gray-800 outline-none appearance-none resize-none placeholder:text-gray-400
+                  `}
+                  value={query}
+                  onChange={handleContentChange}
+                  onKeyUp={handleKeyUp}
+                  onKeyDown={handleKeyDown}
+                  autoSize
+                />
+              </div>
+              <div className="flex items-center justify-between px-3 py-1.5 border-t border-gray-100/60">
+                <div className='flex items-center'>
+                  {visionConfig?.enabled && (
+                    <>
+                      <ChatImageUploader
+                        settings={visionConfig}
+                        onUpload={onUpload}
+                        disabled={files.length >= visionConfig.number_limits}
+                      />
+                      <div className='mx-1 w-[1px] h-4 bg-black/5' />
+                    </>
+                  )}
+                </div>
+                <div className="flex items-center">
+                  <div className={`${s.count} mr-2 h-5 leading-5 text-xs bg-gray-50 text-gray-400 px-2 rounded-full mobile:hidden tablet:block`}>{query.trim().length}</div>
+                  <Tooltip
+                    selector='send-tip'
+                    htmlContent={
+                      isResponding
+                        ? <div>{t('common.operation.stop')}</div>
+                        : (
+                          <div>
+                            <div>{t('common.operation.send')} Enter</div>
+                            <div>{t('common.operation.lineBreak')} Shift Enter</div>
+                          </div>
+                        )
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={`${isResponding ? s.stopBtn : s.sendBtn} h-8 w-8 cursor-pointer rounded-full`}
+                      aria-label={t(isResponding ? 'common.operation.stop' : 'common.operation.send') as string}
+                      onClick={isResponding ? onStop : handleSend}
+                    ></button>
+                  </Tooltip>
+                </div>
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import produce, { setAutoFreeze } from 'immer'
 import { useBoolean, useGetState } from 'ahooks'
@@ -9,7 +9,7 @@ import Toast from '@/app/components/base/toast'
 import Sidebar from '@/app/components/sidebar'
 import ConfigSence from '@/app/components/config-scence'
 import Header from '@/app/components/header'
-import { deleteConversation, fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, updateFeedback } from '@/service'
+import { deleteConversation, fetchAppParams, fetchChatList, fetchConversations, generationConversationName, sendChatMessage, stopChatMessage, updateFeedback } from '@/service'
 import type { ChatItem, ConversationItem, Feedbacktype, PromptConfig, VisionFile, VisionSettings } from '@/types/app'
 import type { FileUpload } from '@/app/components/base/file-uploader-in-attachment/types'
 import { Resolution, TransferMethod, WorkflowRunningStatus } from '@/types/app'
@@ -51,7 +51,7 @@ const Main: FC<IMainProps> = () => {
   const [fileConfig, setFileConfig] = useState<FileUpload | undefined>()
 
   useEffect(() => {
-    if (APP_INFO?.title) { document.title = `${APP_INFO.title} - Powered by Dify` }
+    if (APP_INFO?.title) { document.title = `${APP_INFO.title}` }
   }, [APP_INFO?.title])
 
   // onData change thought (the produce obj). https://github.com/immerjs/immer/issues/576
@@ -85,6 +85,8 @@ const Main: FC<IMainProps> = () => {
   const [conversationIdChangeBecauseOfNew, setConversationIdChangeBecauseOfNew, getConversationIdChangeBecauseOfNew] = useGetState(false)
   const [isChatStarted, { setTrue: setChatStarted, setFalse: setChatNotStarted }] = useBoolean(false)
   const [deleteConversationId, setDeleteConversationId] = useState<string | null>(null)
+  const chatHistoryCacheRef = useRef<Record<string, ChatItem[]>>({})
+  const conversationLoadSeqRef = useRef(0)
   const handleStartChat = (inputs: Record<string, any>) => {
     createNewChat()
     setConversationIdChangeBecauseOfNew(true)
@@ -127,7 +129,14 @@ const Main: FC<IMainProps> = () => {
 
     // update chat list of current conversation
     if (!isNewConversation && !conversationIdChangeBecauseOfNew && !isResponding) {
+      const cachedChatList = chatHistoryCacheRef.current[currConversationId]
+      const loadSeq = ++conversationLoadSeqRef.current
+
+      if (cachedChatList) { setChatList(cachedChatList) }
+
       fetchChatList(currConversationId).then((res: any) => {
+        if (loadSeq !== conversationLoadSeqRef.current || currConversationId !== getCurrConversationId()) { return }
+
         const { data } = res
         const newChatList: ChatItem[] = generateNewChatListWithOpenStatement(notSyncToStateIntroduction, notSyncToStateInputs)
 
@@ -150,6 +159,7 @@ const Main: FC<IMainProps> = () => {
             })
           })
         }
+        chatHistoryCacheRef.current[currConversationId] = newChatList
         setChatList(newChatList)
       })
     }
@@ -213,17 +223,11 @@ const Main: FC<IMainProps> = () => {
   */
   const [chatList, setChatList, getChatList] = useGetState<ChatItem[]>([])
   const chatListDomRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    // scroll to bottom with page-level scrolling
-    if (chatListDomRef.current) {
-      setTimeout(() => {
-        chatListDomRef.current?.scrollIntoView({
-          behavior: 'auto',
-          block: 'end',
-        })
-      }, 50)
-    }
-  }, [chatList, currConversationId])
+  const chatScrollContainerRef = useRef<HTMLDivElement>(null)
+  const [chatInputHeight, setChatInputHeight] = useState(0)
+  const handleInputHeightChange = useCallback((height: number) => {
+    setChatInputHeight(prev => Math.abs(prev - height) < 1 ? prev : height)
+  }, [])
   // user can not edit inputs if user had send message
   const canEditInputs = !chatList.some(item => item.isAnswer === false) && isNewConversation
   const createNewChat = () => {
@@ -332,8 +336,31 @@ const Main: FC<IMainProps> = () => {
     })()
   }, [])
 
+  // auto-start chat for new conversations without required prompt variables
+  useEffect(() => {
+    if (inited && isNewConversation && !isChatStarted && promptConfig) {
+      const hasRequiredVars = promptConfig.prompt_variables.some(v => v.required !== false)
+      if (!hasRequiredVars) {
+        handleStartChat({})
+      }
+    }
+  }, [inited, isNewConversation, isChatStarted, promptConfig])
+
   const [isResponding, { setTrue: setRespondingTrue, setFalse: setRespondingFalse }] = useBoolean(false)
-  const [abortController, setAbortController] = useState<AbortController | null>(null)
+
+  // smooth scroll when conversation switches
+  useEffect(() => {
+    if (!isResponding && chatScrollContainerRef.current) {
+      const el = chatScrollContainerRef.current
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+  }, [chatList, isResponding])
+
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const messageTaskIdRef = useRef('')
   const { notify } = Toast
   const logError = (message: string) => {
     notify({ type: 'error', message })
@@ -359,8 +386,7 @@ const Main: FC<IMainProps> = () => {
 
   const [controlFocus, setControlFocus] = useState(0)
   const [openingSuggestedQuestions, setOpeningSuggestedQuestions] = useState<string[]>([])
-  const [messageTaskId, setMessageTaskId] = useState('')
-  const [hasStopResponded, setHasStopResponded, getHasStopResponded] = useGetState(false)
+  const [, setHasStopResponded, getHasStopResponded] = useGetState(false)
   const [isRespondingConIsCurrCon, setIsRespondingConCurrCon, getIsRespondingConIsCurrCon] = useGetState(true)
   const [userQuery, setUserQuery] = useState('')
 
@@ -395,6 +421,41 @@ const Main: FC<IMainProps> = () => {
       upload_file_id: fileItem.id,
     }
   }
+
+  const handleStopResponding = useCallback(() => {
+    setHasStopResponded(true)
+
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+    setRespondingFalse()
+
+    setChatList(produce(getChatList(), (draft) => {
+      const currentAnswer = [...draft]
+        .reverse()
+        .find(item => item.isAnswer && (item.responseMeta?.status === 'waiting' || item.responseMeta?.status === 'streaming'))
+
+      if (!currentAnswer) { return }
+
+      currentAnswer.responseMeta = {
+        ...(currentAnswer.responseMeta || { startedAt: Date.now() }),
+        completedAt: Date.now(),
+        status: 'stopped',
+      }
+
+      if (currentAnswer.workflowProcess?.status === WorkflowRunningStatus.Running) {
+        currentAnswer.workflowProcess.status = WorkflowRunningStatus.Stopped
+      }
+    }))
+
+    const taskId = messageTaskIdRef.current
+    messageTaskIdRef.current = ''
+
+    if (taskId) {
+      stopChatMessage(taskId).catch((error) => {
+        console.warn('stop chat task failed:', error)
+      })
+    }
+  }, [getChatList, setChatList, setHasStopResponded, setRespondingFalse])
 
   const handleSend = async (message: string, files?: VisionFile[]) => {
     if (isResponding) {
@@ -474,12 +535,17 @@ const Main: FC<IMainProps> = () => {
     const prevTempNewConversationId = getCurrConversationId() || '-1'
     let tempNewConversationId = ''
 
+    setHasStopResponded(false)
+    messageTaskIdRef.current = ''
+    abortControllerRef.current = null
     setRespondingTrue()
     sendChatMessage(data, {
       getAbortController: (abortController) => {
-        setAbortController(abortController)
+        abortControllerRef.current = abortController
       },
       onData: (message: string, isFirstMessage: boolean, { conversationId: newConversationId, messageId, taskId }: any) => {
+        if (getHasStopResponded()) { return }
+
         if (!responseItem.responseMeta?.firstTokenAt) {
           responseItem.responseMeta = {
             ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
@@ -501,7 +567,9 @@ const Main: FC<IMainProps> = () => {
 
         if (isFirstMessage && newConversationId) { tempNewConversationId = newConversationId }
 
-        setMessageTaskId(taskId)
+        if (taskId) {
+          messageTaskIdRef.current = taskId
+        }
         // has switched to other conversation
         if (prevTempNewConversationId !== getCurrConversationId()) {
           setIsRespondingConCurrCon(false)
@@ -516,6 +584,7 @@ const Main: FC<IMainProps> = () => {
       },
       async onCompleted(hasError?: boolean) {
         try {
+          if (getHasStopResponded()) { return }
           if (hasError) { return }
           responseItem.responseMeta = {
             ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
@@ -549,10 +618,13 @@ const Main: FC<IMainProps> = () => {
           console.error('onCompleted error:', e)
         }
         finally {
+          abortControllerRef.current = null
           setRespondingFalse()
         }
       },
       onFile(file) {
+        if (getHasStopResponded()) { return }
+
         const lastThought = responseItem.agent_thoughts?.[responseItem.agent_thoughts?.length - 1]
         if (lastThought) { lastThought.message_files = [...(lastThought as any).message_files, { ...file }] }
 
@@ -564,6 +636,8 @@ const Main: FC<IMainProps> = () => {
         })
       },
       onThought(thought) {
+        if (getHasStopResponded()) { return }
+
         isAgentMode = true
         if (!responseItem.responseMeta?.firstTokenAt) {
           responseItem.responseMeta = {
@@ -607,6 +681,8 @@ const Main: FC<IMainProps> = () => {
         })
       },
       onMessageEnd: (messageEnd) => {
+        if (getHasStopResponded()) { return }
+
         responseItem.responseMeta = {
           ...(responseItem.responseMeta || { startedAt: responseStartedAt }),
           completedAt: Date.now(),
@@ -644,6 +720,8 @@ const Main: FC<IMainProps> = () => {
         setChatList(newListWithAnswer)
       },
       onMessageReplace: (messageReplace) => {
+        if (getHasStopResponded()) { return }
+
         setChatList(produce(
           getChatList(),
           (draft) => {
@@ -654,14 +732,22 @@ const Main: FC<IMainProps> = () => {
         ))
       },
       onError() {
+        if (getHasStopResponded()) { return }
+
         setRespondingFalse()
+        abortControllerRef.current = null
         // role back placeholder answer
         setChatList(produce(getChatList(), (draft) => {
           draft.splice(draft.findIndex(item => item.id === placeholderAnswerId), 1)
         }))
       },
       onWorkflowStarted: ({ workflow_run_id, task_id }) => {
+        if (getHasStopResponded()) { return }
+
         // taskIdRef.current = task_id
+        if (task_id) {
+          messageTaskIdRef.current = task_id
+        }
         responseItem.workflow_run_id = workflow_run_id
         responseItem.workflowProcess = {
           status: WorkflowRunningStatus.Running,
@@ -676,6 +762,8 @@ const Main: FC<IMainProps> = () => {
         }))
       },
       onWorkflowFinished: ({ data }) => {
+        if (getHasStopResponded()) { return }
+
         responseItem.workflowProcess!.status = data.status as WorkflowRunningStatus
         setChatList(produce(getChatList(), (draft) => {
           const currentIndex = draft.findIndex(item => item.id === responseItem.id)
@@ -686,6 +774,8 @@ const Main: FC<IMainProps> = () => {
         }))
       },
       onNodeStarted: ({ data }) => {
+        if (getHasStopResponded()) { return }
+
         responseItem.workflowProcess!.tracing!.push(data as any)
         setChatList(produce(getChatList(), (draft) => {
           const currentIndex = draft.findIndex(item => item.id === responseItem.id)
@@ -696,6 +786,8 @@ const Main: FC<IMainProps> = () => {
         }))
       },
       onNodeFinished: ({ data }) => {
+        if (getHasStopResponded()) { return }
+
         const currentIndex = responseItem.workflowProcess!.tracing!.findIndex(item => item.node_id === data.node_id)
         responseItem.workflowProcess!.tracing[currentIndex] = data as any
         setChatList(produce(getChatList(), (draft) => {
@@ -709,9 +801,9 @@ const Main: FC<IMainProps> = () => {
     })
   }
 
-  const handleFeedback = async (messageId: string, feedback: Feedbacktype) => {
+  const handleFeedback = useCallback(async (messageId: string, feedback: Feedbacktype) => {
     await updateFeedback({ url: `/messages/${messageId}/feedbacks`, body: { rating: feedback.rating } })
-    const newChatList = chatList.map((item) => {
+    const newChatList = getChatList().map((item) => {
       if (item.id === messageId) {
         return {
           ...item,
@@ -722,7 +814,7 @@ const Main: FC<IMainProps> = () => {
     })
     setChatList(newChatList)
     notify({ type: 'success', message: t('common.api.success') })
-  }
+  }, [getChatList, notify, setChatList, t])
 
   const renderSidebar = () => {
     if (!APP_ID || !APP_INFO || !promptConfig) { return null }
@@ -760,7 +852,7 @@ const Main: FC<IMainProps> = () => {
           </div>
         )}
         {/* main */}
-        <div className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto bg-[linear-gradient(180deg,_#F7F8FB_0%,_#FFFFFF_48%,_#F8FAFC_100%)] mobile:h-[calc(100vh_-_3rem_-_env(safe-area-inset-top))]'>
+        <div ref={chatScrollContainerRef} className='flex-grow flex flex-col h-[calc(100vh_-_3rem)] overflow-y-auto bg-[linear-gradient(180deg,_#F7F8FB_0%,_#FFFFFF_48%,_#F8FAFC_100%)] mobile:h-[calc(100vh_-_3rem_-_env(safe-area-inset-top))]' style={{ overflowAnchor: 'none' }}>
           <ConfigSence
             conversationName={conversationName}
             hasSetInputs={hasSetInputs}
@@ -775,15 +867,22 @@ const Main: FC<IMainProps> = () => {
 
           {
             hasSetInputs && (
-              <div className='relative grow pc:w-[794px] max-w-full mobile:w-full mobile:pb-[176px] tablet:pb-[190px] mx-auto mb-3.5' ref={chatListDomRef}>
+              <div
+                className='relative grow pc:w-[794px] max-w-full mobile:w-full mx-auto mb-3.5'
+                ref={chatListDomRef}
+                style={{ paddingBottom: hasSetInputs ? Math.max(chatInputHeight + 24, 112) : undefined }}
+              >
                 <Chat
                   chatList={chatList}
                   onSend={handleSend}
+                  onStop={handleStopResponding}
                   onFeedback={handleFeedback}
                   isResponding={isResponding}
                   checkCanSend={checkCanSend}
                   visionConfig={visionConfig}
                   fileConfig={fileConfig}
+                  scrollContainerRef={chatScrollContainerRef}
+                  onInputHeightChange={handleInputHeightChange}
                 />
               </div>)
           }

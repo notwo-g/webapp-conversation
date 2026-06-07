@@ -21,6 +21,7 @@ const translation = {
     responseStageComposing: '正在组织回答',
     responseStreaming: '正在输出',
     responseCompleted: '生成完成',
+    responseStopped: '已停止',
     firstTokenIn: '首响',
     privacyPolicyLeft: '请阅读由该应用开发者提供的',
     privacyPolicyMiddle: '隐私政策',

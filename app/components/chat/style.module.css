@@ -40,7 +40,7 @@
 }
 
 .answerWrap .itemOperation {
-  display: none;
+  display: flex;
 }
 
 .answerWrap:hover .itemOperation {
@@ -95,6 +95,31 @@
 .sendBtn:hover {
   background-color: #1A56DB;
   box-shadow: 0 10px 22px rgba(28, 100, 242, 0.34);
+  transform: translateY(-1px);
+}
+
+.stopBtn {
+  position: relative;
+  background-color: #DC2626;
+  box-shadow: 0 8px 18px rgba(220, 38, 38, 0.22);
+  transition: transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.stopBtn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background-color: #FFFFFF;
+  transform: translate(-50%, -50%);
+}
+
+.stopBtn:hover {
+  background-color: #B91C1C;
+  box-shadow: 0 10px 22px rgba(220, 38, 38, 0.30);
   transform: translateY(-1px);
 }
 

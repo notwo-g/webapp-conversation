@@ -6,7 +6,10 @@ import type { Emoji } from '@/types/tools'
 import { ChevronDownIcon, HandThumbDownIcon, HandThumbUpIcon } from '@heroicons/react/24/outline'
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import copy from 'copy-to-clipboard'
 import Button from '@/app/components/base/button'
+import { Clipboard, ClipboardCheck } from '@/app/components/base/icons/line/files'
+import RefreshCcw01 from '@/app/components/base/icons/line/refresh-ccw-01'
 import StreamdownMarkdown from '@/app/components/base/streamdown-markdown'
 import Tooltip from '@/app/components/base/tooltip'
 import WorkflowProcess from '@/app/components/workflow/workflow-process'
@@ -19,8 +22,7 @@ import Thought from '../thought'
 function OperationBtn({ innerContent, onClick, className }: { innerContent: React.ReactNode, onClick?: () => void, className?: string }) {
   return (
     <div
-      className={`relative box-border flex items-center justify-center h-7 w-7 p-0.5 rounded-lg bg-white cursor-pointer text-gray-500 hover:text-gray-800 ${className ?? ''}`}
-      style={{ boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)' }}
+      className={`relative box-border flex items-center justify-center h-7 w-7 rounded-lg border border-gray-200 bg-white cursor-pointer text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 ${className ?? ''}`}
       onClick={onClick && onClick}
     >
       {innerContent}
@@ -28,22 +30,8 @@ function OperationBtn({ innerContent, onClick, className }: { innerContent: Reac
   )
 }
 
-const OpeningStatementIcon: FC<{ className?: string }> = ({ className }) => (
-  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path fillRule="evenodd" clipRule="evenodd" d="M6.25002 1C3.62667 1 1.50002 3.12665 1.50002 5.75C1.50002 6.28 1.58702 6.79071 1.7479 7.26801C1.7762 7.35196 1.79285 7.40164 1.80368 7.43828L1.80722 7.45061L1.80535 7.45452C1.79249 7.48102 1.77339 7.51661 1.73766 7.58274L0.911727 9.11152C0.860537 9.20622 0.807123 9.30503 0.770392 9.39095C0.733879 9.47635 0.674738 9.63304 0.703838 9.81878C0.737949 10.0365 0.866092 10.2282 1.05423 10.343C1.21474 10.4409 1.38213 10.4461 1.475 10.4451C1.56844 10.444 1.68015 10.4324 1.78723 10.4213L4.36472 10.1549C4.406 10.1506 4.42758 10.1484 4.44339 10.1472L4.44542 10.147L4.45161 10.1492C4.47103 10.1562 4.49738 10.1663 4.54285 10.1838C5.07332 10.3882 5.64921 10.5 6.25002 10.5C8.87338 10.5 11 8.37335 11 5.75C11 3.12665 8.87338 1 6.25002 1ZM4.48481 4.29111C5.04844 3.81548 5.7986 3.9552 6.24846 4.47463C6.69831 3.9552 7.43879 3.82048 8.01211 4.29111C8.58544 4.76175 8.6551 5.562 8.21247 6.12453C7.93825 6.47305 7.24997 7.10957 6.76594 7.54348C6.58814 7.70286 6.49924 7.78255 6.39255 7.81466C6.30103 7.84221 6.19589 7.84221 6.10436 7.81466C5.99767 7.78255 5.90878 7.70286 5.73098 7.54348C5.24694 7.10957 4.55867 6.47305 4.28444 6.12453C3.84182 5.562 3.92117 4.76675 4.48481 4.29111Z" fill="#667085" />
-  </svg>
-)
-
 const RatingIcon: FC<{ isLike: boolean }> = ({ isLike }) => {
   return isLike ? <HandThumbUpIcon className="w-4 h-4" /> : <HandThumbDownIcon className="w-4 h-4" />
-}
-
-const EditIcon: FC<{ className?: string }> = ({ className }) => {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-      <path d="M14 11.9998L13.3332 12.7292C12.9796 13.1159 12.5001 13.3332 12.0001 13.3332C11.5001 13.3332 11.0205 13.1159 10.6669 12.7292C10.3128 12.3432 9.83332 12.1265 9.33345 12.1265C8.83359 12.1265 8.35409 12.3432 7.99998 12.7292M2 13.3332H3.11636C3.44248 13.3332 3.60554 13.3332 3.75899 13.2963C3.89504 13.2637 4.0251 13.2098 4.1444 13.1367C4.27895 13.0542 4.39425 12.9389 4.62486 12.7083L13 4.33316C13.5523 3.78087 13.5523 2.88544 13 2.33316C12.4477 1.78087 11.5523 1.78087 11 2.33316L2.62484 10.7083C2.39424 10.9389 2.27894 11.0542 2.19648 11.1888C2.12338 11.3081 2.0695 11.4381 2.03684 11.5742C2 11.7276 2 11.8907 2 12.2168V13.3332Z" stroke="#6B7280" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
 }
 
 export const EditIconSolid: FC<{ className?: string }> = ({ className }) => {
@@ -87,7 +75,9 @@ const CollapsibleThought: FC<{ content: string, isResponding?: boolean, title?: 
   const [isOpen, setIsOpen] = useState(!!isResponding)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const startedAtRef = useRef<number | null>(null)
+  const thoughtScrollRef = useRef<HTMLDivElement>(null)
   const hasThoughtContent = !!content?.trim()
+  const panelMaxHeight = isResponding ? 'max-h-[180px]' : 'max-h-[360px]'
 
   useEffect(() => {
     setIsOpen(!!isResponding)
@@ -123,6 +113,15 @@ const CollapsibleThought: FC<{ content: string, isResponding?: boolean, title?: 
     }
   }, [hasThoughtContent, isResponding])
 
+  useEffect(() => {
+    if (!isResponding || !isOpen || !thoughtScrollRef.current) { return }
+
+    requestAnimationFrame(() => {
+      if (!thoughtScrollRef.current) { return }
+      thoughtScrollRef.current.scrollTop = thoughtScrollRef.current.scrollHeight
+    })
+  }, [content, isOpen, isResponding])
+
   if (!hasThoughtContent) { return null }
 
   return (
@@ -140,7 +139,7 @@ const CollapsibleThought: FC<{ content: string, isResponding?: boolean, title?: 
         <ChevronDownIcon className={`${isOpen ? 'rotate-180' : ''} h-4 w-4 flex-shrink-0 text-gray-400 transition-transform`} />
       </button>
       {isOpen && (
-        <div className="max-h-[360px] overflow-y-auto border-t border-gray-100 px-3 py-2 text-xs leading-5 text-gray-600">
+        <div ref={thoughtScrollRef} className={`${panelMaxHeight} overflow-y-auto border-t border-gray-100 px-3 py-2 text-xs leading-5 text-gray-600`}>
           <StreamdownMarkdown content={content} />
         </div>
       )}
@@ -202,6 +201,15 @@ const ResponseSpeedStatus: FC<{ item: ChatItem, isResponding?: boolean, hasVisib
     )
   }
 
+  if (meta.status === 'stopped') {
+    return (
+      <div className='mt-3 flex items-center gap-2 text-xs text-gray-400'>
+        <span className='h-1.5 w-1.5 rounded-full bg-gray-400' />
+        <span>{t('app.chat.responseStopped')} · {totalSeconds}s</span>
+      </div>
+    )
+  }
+
   if (meta.status === 'completed') {
     return (
       <div className='mt-3 flex items-center gap-2 text-xs text-gray-400'>
@@ -227,9 +235,11 @@ interface IAnswerProps {
   item: ChatItem
   feedbackDisabled: boolean
   onFeedback?: FeedbackFunc
+  onRetry?: () => void
   isResponding?: boolean
   allToolIcons?: Record<string, string | Emoji>
   suggestionClick?: (suggestion: string) => void
+  canRetry?: boolean
 }
 
 // The component needs to maintain its own state to control whether to display input component
@@ -237,18 +247,36 @@ const Answer: FC<IAnswerProps> = ({
   item,
   feedbackDisabled = false,
   onFeedback,
+  onRetry,
   isResponding,
   allToolIcons,
   suggestionClick = () => { },
+  canRetry = false,
 }) => {
   const { id, content, feedback, agent_thoughts, workflowProcess, suggestedQuestions = [] } = item
   const isAgentMode = !!agent_thoughts && agent_thoughts.length > 0
 
   const { t } = useTranslation()
+  const [isCopied, setIsCopied] = useState(false)
   const contentWithThink = useMemo(() => splitThinkContent(content), [content])
   const hasVisibleContent = isAgentMode
     ? (agent_thoughts || []).some(item => !!item.thought || !!item.tool || (item.message_files || []).some(file => file.type === 'image' && file.belongs_to === 'assistant'))
     : !!(contentWithThink.thought || contentWithThink.answer || content)
+  const copyContent = useMemo(() => {
+    const visibleContent = contentWithThink.thought ? contentWithThink.answer : content
+
+    if (visibleContent?.trim()) { return visibleContent.trim() }
+
+    return (agent_thoughts || [])
+      .map(item => splitThinkContent(item.thought || '').answer || (!item.tool ? item.thought : ''))
+      .filter(item => !!item?.trim())
+      .join('\n\n')
+      .trim()
+  }, [agent_thoughts, content, contentWithThink])
+
+  useEffect(() => {
+    setIsCopied(false)
+  }, [copyContent])
 
   /**
    * Render feedback results (distinguish between users and administrators)
@@ -269,8 +297,7 @@ const Answer: FC<IAnswerProps> = ({
         content={isLike ? '取消赞同' : '取消反对'}
       >
         <div
-          className="relative box-border flex items-center justify-center h-7 w-7 p-0.5 rounded-lg bg-white cursor-pointer text-gray-500 hover:text-gray-800"
-          style={{ boxShadow: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -2px rgba(0, 0, 0, 0.05)' }}
+          className="relative box-border flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
           onClick={async () => {
             await onFeedback?.(id, { rating: null })
           }}
@@ -304,8 +331,30 @@ const Answer: FC<IAnswerProps> = ({
     }
 
     return (
-      <div className={`${s.itemOperation} flex gap-2`}>
+      <div className={`${s.itemOperation} flex items-center gap-1`}>
+        {!!copyContent && (
+          <Tooltip selector={`copy-answer-${randomString(16)}`} content={t(isCopied ? 'common.operation.copied' : 'common.operation.copy') as string}>
+            {OperationBtn({
+              innerContent: isCopied
+                ? <ClipboardCheck className='h-4 w-4 text-primary-600' />
+                : <Clipboard className='h-4 w-4' />,
+              onClick: () => {
+                copy(copyContent)
+                setIsCopied(true)
+              },
+            })}
+          </Tooltip>
+        )}
+        {canRetry && !isResponding && (
+          <Tooltip selector={`retry-answer-${randomString(16)}`} content={t('common.operation.retry') as string}>
+            {OperationBtn({
+              innerContent: <RefreshCcw01 className='h-4 w-4' />,
+              onClick: onRetry,
+            })}
+          </Tooltip>
+        )}
         {userOperation()}
+        {!feedbackDisabled && renderFeedbackRating(feedback?.rating)}
       </div>
     )
   }
@@ -407,15 +456,23 @@ const Answer: FC<IAnswerProps> = ({
                 </div>
               )}
             </div>
-            <div className="absolute top-[-14px] right-[-14px] flex flex-row justify-end gap-1">
-              {!feedbackDisabled && !item.feedbackDisabled && renderItemOperation()}
-              {/* User feedback must be displayed */}
-              {!feedbackDisabled && renderFeedbackRating(feedback?.rating)}
-            </div>
+          </div>
+          <div className='ml-2 mt-2 flex min-h-7 items-center'>
+            {!feedbackDisabled && !item.feedbackDisabled && renderItemOperation()}
+            {item.feedbackDisabled && !feedbackDisabled && renderFeedbackRating(feedback?.rating)}
           </div>
         </div>
       </div>
     </div>
   )
 }
-export default React.memo(Answer)
+
+const areAnswerPropsEqual = (prev: IAnswerProps, next: IAnswerProps) => {
+  return prev.item === next.item
+    && prev.feedbackDisabled === next.feedbackDisabled
+    && prev.isResponding === next.isResponding
+    && prev.canRetry === next.canRetry
+    && prev.allToolIcons === next.allToolIcons
+}
+
+export default React.memo(Answer, areAnswerPropsEqual)

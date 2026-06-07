@@ -49,7 +49,11 @@ export const deleteConversation = async (conversationId: string) => {
 }
 
 export const fetchChatList = async (conversationId: string) => {
-  return get('messages', { params: { conversation_id: conversationId, limit: 20, last_id: '' } })
+  return get('messages', { params: { conversation_id: conversationId, limit: 20, first_id: '' } })
+}
+
+export const stopChatMessage = async (taskId: string) => {
+  return post(`chat-messages/${encodeURIComponent(taskId)}/stop`, { body: {} })
 }
 
 // init value. wait for server update

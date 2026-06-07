@@ -65,7 +65,7 @@ export interface IChatItem {
     startedAt: number
     firstTokenAt?: number
     completedAt?: number
-    status?: 'waiting' | 'streaming' | 'completed'
+    status?: 'waiting' | 'streaming' | 'completed' | 'stopped'
   }
   /**
    * Specific message type

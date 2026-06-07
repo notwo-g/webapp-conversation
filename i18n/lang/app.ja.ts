@@ -22,6 +22,7 @@ const translation = {
     responseStageComposing: 'Composing answer',
     responseStreaming: 'Writing',
     responseCompleted: 'Completed',
+    responseStopped: 'Stopped',
     firstTokenIn: 'first token in',
     privacyPolicyLeft:
       'ご利用前に、',

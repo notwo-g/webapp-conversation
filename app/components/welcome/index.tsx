@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import TemplateVarPanel, { PanelTitle, VarOpBtnGroup } from '../value-panel'
 import FileUploaderInAttachmentWrapper from '../base/file-uploader-in-attachment'
 import s from './style.module.css'
-import { AppInfoComp, ChatBtn, EditBtn, FootLogo, PromptTemplate } from './massive-component'
+import { ChatBtn, EditBtn, PromptTemplate } from './massive-component'
 import type { AppInfo, PromptConfig } from '@/types/app'
 import Toast from '@/app/components/base/toast'
 import Select from '@/app/components/base/select'
@@ -208,52 +208,41 @@ const Welcome: FC<IWelcomeProps> = ({
   const renderNoVarPanel = () => {
     if (isPublicVersion) {
       return (
-        <div>
-          <AppInfoComp siteInfo={siteInfo} />
-          <TemplateVarPanel
-            isFold={false}
-            header={
-              <>
-                <PanelTitle
-                  title={t('app.chat.publicPromptConfigTitle')}
-                  className='mb-1'
-                />
-                <PromptTemplate html={highLightPromoptTemplate} />
-              </>
-            }
-          >
-            <ChatBtn onClick={handleChat} />
-          </TemplateVarPanel>
-        </div>
+        <TemplateVarPanel
+          isFold={false}
+          header={
+            <>
+              <PanelTitle
+                title={t('app.chat.publicPromptConfigTitle')}
+                className='mb-1'
+              />
+              <PromptTemplate html={highLightPromoptTemplate} />
+            </>
+          }
+        >
+          <ChatBtn onClick={handleChat} />
+        </TemplateVarPanel>
       )
     }
-    // private version
+    // private version — no intro, just chat button
     return (
-      <TemplateVarPanel
-        isFold={false}
-        header={
-          <AppInfoComp siteInfo={siteInfo} />
-        }
-      >
+      <div className="flex justify-center">
         <ChatBtn onClick={handleChat} />
-      </TemplateVarPanel>
+      </div>
     )
   }
 
   const renderVarPanel = () => {
     return (
-      <TemplateVarPanel
-        isFold={false}
-        header={
-          <AppInfoComp siteInfo={siteInfo} />
-        }
-      >
+      <div className="space-y-4">
         {renderInputs()}
-        <ChatBtn
-          className='mt-3 mobile:ml-0 tablet:ml-[128px]'
-          onClick={handleChat}
-        />
-      </TemplateVarPanel>
+        <div className="flex justify-center">
+          <ChatBtn
+            className='mt-3'
+            onClick={handleChat}
+          />
+        </div>
+      </div>
     )
   }
 
@@ -354,12 +343,12 @@ const Welcome: FC<IWelcomeProps> = ({
   return (
     <div className='relative mobile:min-h-[48px] tablet:min-h-[64px]'>
       {hasSetInputs && renderHeader()}
-      <div className={`${!hasSetInputs ? 'min-h-[calc(100vh_-_3rem)] bg-[radial-gradient(circle_at_top_left,_rgba(28,100,242,0.10),_transparent_30%),linear-gradient(180deg,_#F9FAFB_0%,_#FFFFFF_58%)]' : ''}`}>
-        <div className='mx-auto pc:w-[794px] max-w-full mobile:w-full px-3.5'>
+      <div className={`${!hasSetInputs ? 'min-h-[calc(100vh_-_3rem)] bg-[radial-gradient(circle_at_14%_0%,_rgba(28,100,242,0.12),_transparent_32%),radial-gradient(circle_at_86%_12%,_rgba(3,84,63,0.08),_transparent_26%),linear-gradient(180deg,_#F7F9FC_0%,_#FFFFFF_54%,_#F8FAFC_100%)]' : ''}`}>
+        <div className='mx-auto pc:w-[1080px] max-w-full mobile:w-full px-4 tablet:px-8'>
           {/*  Has't set inputs  */}
           {
             !hasSetInputs && (
-              <div className='mobile:pt-8 tablet:pt-[96px] pc:pt-[128px]'>
+              <div className='mobile:pt-8 tablet:pt-[88px] pc:pt-[118px]'>
                 {hasVar
                   ? (
                     renderVarPanel()
@@ -376,8 +365,7 @@ const Welcome: FC<IWelcomeProps> = ({
 
           {/* foot */}
           {!hasSetInputs && (
-            <div className='mt-4 flex min-h-8 items-center justify-between gap-3 pb-[calc(env(safe-area-inset-bottom)+24px)] text-xs text-gray-400 mobile:flex-col mobile:items-start tablet:flex-row tablet:items-center'>
-
+            <div className='flex min-h-8 items-center justify-center pb-[calc(env(safe-area-inset-bottom)+24px)] text-xs text-gray-400'>
               {siteInfo.privacy_policy
                 ? <div>{t('app.chat.privacyPolicyLeft')}
                   <a
@@ -387,12 +375,7 @@ const Welcome: FC<IWelcomeProps> = ({
                   >{t('app.chat.privacyPolicyMiddle')}</a>
                   {t('app.chat.privacyPolicyRight')}
                 </div>
-                : <div>
-                </div>}
-              <a className='flex items-center space-x-3' href="https://dify.ai/" target="_blank">
-                <span className='uppercase'>{t('app.chat.powerBy')}</span>
-                <FootLogo />
-              </a>
+                : null}
             </div>
           )}
         </div>

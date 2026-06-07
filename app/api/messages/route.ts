@@ -6,13 +6,15 @@ export async function GET(request: NextRequest) {
   const { sessionId, user } = getInfo(request)
   const { searchParams } = new URL(request.url)
   const conversationId = searchParams.get('conversation_id')
+  const firstId = searchParams.get('first_id')
+  const limit = Number(searchParams.get('limit') || 20)
   if (!conversationId) {
     return NextResponse.json({ data: [], has_more: false, limit: 0 }, {
       headers: setSession(sessionId),
     })
   }
   try {
-    const { data }: any = await withRetry(() => client.getConversationMessages(user, conversationId as string))
+    const { data }: any = await withRetry(() => client.getConversationMessages(user, conversationId as string, firstId, limit))
     return NextResponse.json(data, {
       headers: setSession(sessionId),
     })

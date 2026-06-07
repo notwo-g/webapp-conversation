@@ -241,6 +241,10 @@ const handleStream = (
         return
       }
       if (!hasError) { read() }
+    }).catch((e) => {
+      if (e?.name === 'AbortError') { return }
+      Toast.notify({ type: 'error', message: e })
+      onCompleted?.(true)
     })
   }
   read()
@@ -370,11 +374,15 @@ export const ssePost = (
     onNodeStarted,
     onNodeFinished,
     onError,
+    getAbortController,
   }: IOtherOptions,
 ) => {
   const options = Object.assign({}, baseOptions, {
     method: 'POST',
   }, fetchOptions)
+  const abortController = new AbortController()
+  options.signal = abortController.signal
+  getAbortController?.(abortController)
 
   const urlPrefix = API_PREFIX
   const urlWithPrefix = `${urlPrefix}${url.startsWith('/') ? url : `/${url}`}`
@@ -405,6 +413,7 @@ export const ssePost = (
       }, onThought, onMessageEnd, onMessageReplace, onFile, onWorkflowStarted, onWorkflowFinished, onNodeStarted, onNodeFinished)
     })
     .catch((e) => {
+      if (e?.name === 'AbortError') { return }
       Toast.notify({ type: 'error', message: e })
       onError?.(e)
     })

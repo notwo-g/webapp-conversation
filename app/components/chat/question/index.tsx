@@ -40,4 +40,12 @@ const Question: FC<IQuestionProps> = ({ id, content, useCurrentUserAvatar, imgSr
   )
 }
 
-export default React.memo(Question)
+const areQuestionPropsEqual = (prev: IQuestionProps, next: IQuestionProps) => {
+  return prev.id === next.id
+    && prev.content === next.content
+    && prev.useCurrentUserAvatar === next.useCurrentUserAvatar
+    && (prev.imgSrcs || []).length === (next.imgSrcs || []).length
+    && (prev.imgSrcs || []).every((src, index) => src === (next.imgSrcs || [])[index])
+}
+
+export default React.memo(Question, areQuestionPropsEqual)

@@ -98,6 +98,9 @@ const Sidebar: FC<ISidebarProps> = ({
       <div className="flex flex-shrink-0 pr-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pl-4">
         <div className="text-gray-400 font-normal text-xs">© {copyRight} {(new Date()).getFullYear()}</div>
       </div>
+      <div className="flex flex-shrink-0 pr-4 pb-3 pl-4">
+        <span className="text-gray-400 font-normal text-[11px]">Powered by <a href="https://www.onenode.space/" target="_blank" rel="noopener noreferrer" className="text-gray-500 font-medium hover:text-primary-600 transition-colors">OneNode</a></span>
+      </div>
     </div>
   )
 }
